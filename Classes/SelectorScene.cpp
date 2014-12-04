@@ -6,7 +6,8 @@
 #define NUM_BG_VEC      20
 #define RADIUS_BG       280
 #define HOLE_SIZE_RAD   0.4
-
+#define IMPULSE_MAX     700
+#define IMPULSE_MIN     100
 USING_NS_CC;
 
 Scene* CSelector::createScene()
@@ -133,8 +134,8 @@ void CSelector::vInitDrawBackground()
         y = RADIUS_BG*sinf((-0.5)*M_PI + HOLE_SIZE_RAD/2 + i*radInterval);
         vec[i] = Point(x, y);
     }
-    vec[NUM_BG_VEC-2] = Vec2(vec[NUM_BG_VEC-3].x,vec[NUM_BG_VEC-3].y-80);
-    vec[NUM_BG_VEC-1] = Vec2(vec[0].x,vec[0].y-80);
+    vec[NUM_BG_VEC-2] = Vec2(vec[NUM_BG_VEC-3].x,   vec[NUM_BG_VEC-3].y - 100);
+    vec[NUM_BG_VEC-1] = Vec2(vec[0].x,              vec[0].y - 100);
     
     
     for (int i = 0; i < NUM_BG_VEC; i++)
@@ -162,18 +163,12 @@ void CSelector::vInitDrawSprites()
     //add five dynamic body
     for (int i = 0; i < NUM_BALLS; i++)
     {
-        physicsBody = PhysicsBody::createCircle(40.0f);
+        physicsBody = PhysicsBody::createCircle(40.0f, PhysicsMaterial(0.15, 1.06, 0.1));
         
         //set the body isn't affected by the physics world's gravitational force
-        
-        //set initial velocity of physicsBody
-//        physicsBody->setVelocity(Vec2(cocos2d::random(-500,500),
-//                                      cocos2d::random(-500,500)));
-        
         physicsBody->setTag(DRAG_BODYS_TAG);
         
         auto sprite = Sprite::create();
-        sprite->setPhysicsBody(PhysicsBody::createBox(Size(50,50)));
         sprite->setPosition(Vec2(this->getContentSize().width/2 + cocos2d::random(-RADIUS_BG/2, RADIUS_BG/2),this->getContentSize().height/2 + cocos2d::random(-RADIUS_BG/2, RADIUS_BG/2)));
         sprite->setPhysicsBody(physicsBody);
         balls->addChild(sprite);
@@ -187,9 +182,37 @@ bool CSelector::onTouchBegan(Touch *touch, Event *unused_event)
 {
     for (auto child: balls->getChildren())
     {
-        child->getPhysicsBody()->applyImpulse(Vect(cocos2d::random(-500,500),cocos2d::random(100,1000)) * GRAVITY);
+        float xDiff, yDiff, ix, iy;
+        xDiff = child->getPosition().x - touch->getLocation().x;
+        yDiff = child->getPosition().y - touch->getLocation().y;
+        if (xDiff < 0) {
+            xDiff = -IMPULSE_MAX - xDiff;
+            ix = MIN(xDiff, -IMPULSE_MIN);  // abs MIN is applied
+            ix = MAX(xDiff, -IMPULSE_MAX);  // abs MAX is applied
+        }
+        else {
+            xDiff = IMPULSE_MAX - xDiff;
+            ix = MAX(xDiff, IMPULSE_MIN);  // abs MIN is applied
+            ix = MIN(xDiff, IMPULSE_MAX);  // abs MAX is applied
+        }
+        if (yDiff < 0) {
+            yDiff = -IMPULSE_MAX - yDiff;
+            iy = MIN(yDiff, -IMPULSE_MIN);  // abs MIN is applied
+            iy = MAX(yDiff, -IMPULSE_MAX);  // abs MAX is applied
+        }
+        else {
+            yDiff = IMPULSE_MAX - yDiff;
+            iy = MAX(yDiff, IMPULSE_MIN);  // abs MIN is applied
+            iy = MIN(yDiff, IMPULSE_MAX);  // abs MAX is applied
+        }
+        
+        
+//        if (ix < 0) ix = 0;
+//        if (iy < 0) iy = 0;
+        child->getPhysicsBody()->applyImpulse(Vect(ix,iy) * GRAVITY);
+        //CCLOG("Ball Pos.x:%.1f, y:%.1f", child->getPosition().x, child->getPosition().y);
     }
-    CCLOG("Touched x:%f, y:%f",touch->getLocation().x, touch->getLocation().y);
+    //CCLOG("Touched x:%f, y:%f",touch->getLocation().x, touch->getLocation().y);
     return true;
 }
 
